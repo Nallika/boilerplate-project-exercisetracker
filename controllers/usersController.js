@@ -1,5 +1,5 @@
 import { body, param, validationResult } from 'express-validator';
-import { addNewUser, getUserById } from '../models/usersModel.js';
+import {addNewUser, getUserById, getUsers} from '../models/usersModel.js';
 
 /**
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
@@ -37,14 +37,31 @@ export const getUser = [
     if(!req.params)
       return res.send("NO PARAMS PASSED")
 
-    const user = await getUserById(req.params._id);
+    const { result, error } = await getUserById(req.params._id);
 
-    if (!user) {
+    if (!result || error) {
       res.status(404).json('User not found');
       return;
     }
 
-    res.json(user);
+    res.json(result);
   }
 ];
+
+/**
+ * @param req
+ * @param res
+ * @returns {Promise<void>}
+ */
+export const getAllUsers = async (req, res) => {
+  const { limit } = req.query;
+  const { result, error } = await getUsers(limit);
+
+  if (error) {
+    res.status(400).json(`Get users error: ${error}`);
+    return;
+  }
+
+  res.json(result);
+}
 

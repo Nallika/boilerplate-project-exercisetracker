@@ -1,5 +1,6 @@
-import { putData, getOneByParam } from '../storage/dbMethods.js';
+import { putData, getOneByParam, getAll } from '../storage/dbMethods.js';
 import { UNIQUE_FIELD_ERROR } from '../constants/index.js'
+import { ORDER_TYPES } from '../constants/index.js';
 
 /**
  * Add new user with provided name if it uniq
@@ -8,7 +9,7 @@ import { UNIQUE_FIELD_ERROR } from '../constants/index.js'
  */
 export const addNewUser = async (name) => {
   // Set user to db
-  const {error, lastID} = await putData('Users', {name});
+  const {error, result: lastID} = await putData('Users', {name});
 
   if (error) {
     return {
@@ -19,16 +20,22 @@ export const addNewUser = async (name) => {
   }
 
   // return just added user from db
-  const result = await getOneByParam('Users', 'id', lastID);
-
-  return { result };
+  return await getOneByParam('Users', {id: lastID});
 }
 
 /**
- * Gwt user by id
+ * Get user by id
  * @param id
  * @returns {Promise<string|string|*>}
  */
 export const getUserById = async (id) => {
-  return await getOneByParam('Users', 'id', Number(id));
+  return await getOneByParam('Users', {id: Number(id)});
+}
+
+/**
+ * Get all users
+ * @returns {Promise<*>}
+ */
+export const getUsers = async (limit) => {
+  return await getAll('Users', {limit, order: { column: 'name', type: ORDER_TYPES.DESC }});
 }

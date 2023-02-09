@@ -1,4 +1,5 @@
-import {putData, getOneByParam, getAll, getAllByParam, getAllByParamDate} from '../storage/dbMethods.js';
+import {putData, getOneByParam, getAll, getAllByParamAndDate} from '../storage/dbMethods.js';
+import { ORDER_TYPES } from '../constants/index.js';
 
 /**
  * Add exercise to provided user if it exists
@@ -6,13 +7,13 @@ import {putData, getOneByParam, getAll, getAllByParam, getAllByParamDate} from '
  * @returns {Promise<string|{[p: string]: *}>}
  */
 export const processExercise = async (data) => {
-  const { userId: id, description, duration, date } = data;
+  const { id, description, duration, date } = data;
   const userId = Number(id);
 
   // check existence of user by provided id before search for exercises
-  const user =  await getOneByParam('Users', 'id', userId);
+  const { result: user, error: userError } =  await getOneByParam('Users', {id: userId});
 
-  if (!user) {
+  if (!user || userError) {
     return {
       error: `There is no user with id = ${userId}`
     };
@@ -29,16 +30,22 @@ export const processExercise = async (data) => {
     exercisesValues.date = date;
   }
 
-  const { error, lastID} = await putData('Exercises', exercisesValues);
+  const { error: exercisesError, result: lastID} = await putData('Exercises', exercisesValues);
 
-  if (error) {
+  if (exercisesError) {
     return {
       error: 'Error when adding exercise check input values'
     };
   }
 
   // get just added exercises and return alongside with linked user
-  const exercise =  await getOneByParam('Exercises', 'id', lastID);
+  const {result: exercise, error} =  await getOneByParam('Exercises', {id: lastID});
+
+  if (error) {
+    return {
+      error: 'Error when retrieving added exercise check input values'
+    };
+  }
 
   return {
     result: {
@@ -54,20 +61,33 @@ export const processExercise = async (data) => {
  * @returns {Promise<*>}
  */
 export const getExercises = async (data) => {
-  const { ':_id': id, from, to, limit } = data;
+  const { id, from, to, limit } = data;
   const userId = Number(id);
-  let result;
 
-  // If there are provided date range, use it for search exercises
-  if (from && to) {
-    result = await getAllByParamDate('Exercises', 'userId', userId, from, to, limit);
-  // otherwise retrieve all exercises linked to provided user
-  } else {
-    result = await getAllByParam('Exercises', 'userId', userId, limit);
+  const { result, error } = await getAllByParamAndDate(
+    'Exercises',
+    {userId},
+    from,
+    to,
+    {limit, order: {column: 'date', type: ORDER_TYPES.ASC}}
+  );
+
+  if (error) {
+    return {
+      error: 'Retrieving exercises error, check input values'
+    };
   }
 
   return {
-    exercises: result,
+    result,
     count: result.length
   };
+}
+
+/**
+ * Get all users
+ * @returns {Promise<*>}
+ */
+export const getExercisesList = async (limit) => {
+  return await getAll('Exercises', {limit, order: { column: 'date', type: ORDER_TYPES.DESC }});
 }

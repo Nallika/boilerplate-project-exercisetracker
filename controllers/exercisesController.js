@@ -1,5 +1,5 @@
 import { body, param, query, validationResult } from 'express-validator';
-import { processExercise, getExercises } from '../models/exercisesModel.js';
+import { processExercise, getExercises, getExercisesList } from '../models/exercisesModel.js';
 
 /**
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
@@ -17,11 +17,9 @@ export const addExercises = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.params._id;
-
     const { result, error } = await processExercise({
-      userId,
-      ...req.body
+      ...req.body,
+      id: req.params._id,
     });
 
     if (error) {
@@ -49,13 +47,28 @@ export const getExercisesLogs = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const userId = req.params.id;
-
-    const exercises = await getExercises({
-      userId,
-      ...req.query
+    const { result, error } = await getExercises({
+      ...req.query,
+      id: req.params._id,
     });
 
-    res.json(exercises);
+    if (error) {
+      res.status(400).send(error);
+      return;
+    }
+
+    res.json(result);
   }
 ];
+
+export const getAllExercises = async (req, res) => {
+  const { limit } = req.query;
+  const { result, error } = await getExercisesList(limit);
+
+  if (error) {
+    res.status(400).json(`Get exercises error ${error}`);
+    return;
+  }
+
+  res.json(result);
+}

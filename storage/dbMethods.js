@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import { Database } from 'sqlite-async';
 
-import { checkType } from '../utils/index.js'
+import { checkTableAndFields, getOptions, getColumnsSelector, getDateSelector } from './dbHelpers.js'
+import { SELECT_OPTIONS } from '../constants/index.js';
 
 const dbFile = new URL('storage.db', import.meta.url).pathname;
 const initSql = fs.readFileSync(new URL('init.sql', import.meta.url).pathname,"utf-8");
@@ -38,50 +39,6 @@ const initDatabase = async () => {
 };
 
 /**
- * Check is provided table exist, is it has provided columns,
- * and is provided data match column types
- * @param db
- * @param {String} tableName
- * @param {Object} data
- * @returns {Promise<boolean>}
- */
-const checkTableAndFields = async (db, tableName, data = {}) => {
-  const columns = Object.keys(data);
-  const tableScheme = await db.all(`PRAGMA table_info(${tableName});`);
-
-  if (!tableScheme || !tableScheme.length) {
-    throw new Error(`no such table: ${tableName}`);
-  }
-
-  if (!columns) {
-    return true;
-  }
-
-  let tableFieldsTypesMap = {};
-  tableScheme.forEach(({name, type}) => tableFieldsTypesMap[name] = type);
-
-  columns.forEach((column) => {
-    const columnType = tableFieldsTypesMap[column];
-
-    if (!columnType) {
-      throw new Error(`try to access wrong column: ${column}, from table: ${tableName}`);
-    }
-
-    if (!data) {
-      return;
-    }
-
-    const value = data[column];
-
-    if (!checkType(typeof value, columnType)) {
-      throw new Error(`attempt to insert data: ${value} in column: ${column}, from table: ${tableName}`);
-    }
-  });
-
-  return true;
-}
-
-/**
  * Put provided data to provided table
  * @param {String} tableName
  * @param {Object} data
@@ -92,7 +49,9 @@ const putData = async (tableName, data) => {
   const values = Object.values(data);
 
   return await executeDbCommand(async (db) => {
-    if (await checkTableAndFields(db, tableName, data)) {
+    const { isValid, error } = await checkTableAndFields(db, tableName, data);
+
+    if (isValid) {
       const placeholders = new Array(values.length).fill('?');
 
       const {lastID, changes} = await db.run(
@@ -100,97 +59,104 @@ const putData = async (tableName, data) => {
       );
 
       return {
-        lastID,
-        error: !changes
+        result: lastID,
+        error: !changes ? 'Data was not inserted, check input' : ''
       };
     }
+
+    return { error };
   });
 };
 
 /**
  * Get record from provided table, search by provided field and value
  * @param {String} tableName
- * @param {String} column
- * @param {String | Number} value
+ * @param {Object} data
  * @returns {Promise<*>}
  */
-const getOneByParam = async (tableName, column, value) => {
-  let result;
+const getOneByParam = async (tableName, data) => {
+  return await executeDbCommand(async (db) => {
+    const { isValid, error } = await checkTableAndFields(db, tableName, data);
 
-  await executeDbCommand(async (db) => {
-    if(await checkTableAndFields(db, tableName,{[column]: value})) {
-      result = await db.get(`SELECT * FROM ${tableName} WHERE ${column} = "${value}";`);
+    if(isValid) {
+      const result = await db.get(`SELECT * FROM ${tableName} ${getColumnsSelector(data)};`);
+      return { result };
     }
-  });
 
-  return result;
+    return { error };
+  });
 };
 
 /**
  * Get all columns from provided table
  * @param {String} tableName
- * @param {Number} limit
+ * @param {Object} options
  * @returns {Promise<*>}
  */
-const getAll = async (tableName, limit= 0) => {
-  let result;
+const getAll = async (tableName, options = {}) => {
+  return await executeDbCommand(async (db) => {
+    const sortingColumn = options[SELECT_OPTIONS.order]?.column;
+    const { isValid, error } = await checkTableAndFields(db, tableName, {[sortingColumn]: ''});
 
-  await executeDbCommand(async (db) => {
-    if(await checkTableAndFields(db, tableName)) {
-      result = await db.all(`SELECT * FROM ${tableName} ${limit ? 'LIMIT '+limit : ''};`);
+    if(isValid) {
+      const result = await db.all(`SELECT * FROM ${tableName} ${getOptions(options)};`);
+      return { result };
     }
-  });
 
-  return result
+    return { error };
+  });
 };
 
 /**
  * Get all records from provided table, search by provided field and value
  * @param {String} tableName
- * @param {String} column
- * @param {String || Number} value
- * @param {Number} limit
+ * @param {Object} data
+ * @param {Object} options
  * @returns {Promise<*>}
  */
-const getAllByParam = async (tableName, column, value, limit= 0) => {
-  let result;
+const getAllByParam = async (tableName, data, options) => {
+  return await executeDbCommand(async (db) => {
+    const sortingColumn = options[SELECT_OPTIONS.order]?.column;
+    const { isValid, error } = await checkTableAndFields(db, tableName, {...data, [sortingColumn]: ''})
 
-  await executeDbCommand(async (db) => {
-    if(await checkTableAndFields(db, tableName, {[column]: value})) {
-
-      result = await db.all(
-        `SELECT * FROM ${tableName} WHERE ${column} = "${value}" ${limit ? 'LIMIT '+limit : ''};`
+    if(isValid) {
+      const result = await db.all(
+        `SELECT * FROM ${tableName} ${getColumnsSelector(data)} ${getOptions(options)};`
       );
-    }
-  });
 
-  return result;
+      return { result };
+    }
+
+    return { error };
+  });
 };
 
 /**
  * Get all records from provided table, search by provided field, value and date
  * @param {String} tableName
- * @param {String} column
- * @param {String | Number} value
- * @param {String} dateFrom
- * @param {String} dateTo
- * @param {Number} limit
+ * @param {Object} data
+ * @param {String} from
+ * @param {String} to
+ * @param {Object} options
  * @returns {Promise<*>}
  */
-const getAllByParamDate = async (tableName, column, value, dateFrom, dateTo, limit= 0) => {
-  let result;
+const getAllByParamAndDate = async (tableName, data, from, to, options) => {
 
-  await executeDbCommand(async (db) => {
-    if(await checkTableAndFields(db, tableName, {[column]: value})) {
-      result = await db.all(
-        `SELECT * FROM ${tableName} WHERE ${column} = "${value}" 
-         AND date BETWEEN "${dateFrom}" AND "${dateTo}" ORDER BY date ${limit ? 'LIMIT '+limit : ''};`
+  return await executeDbCommand(async (db) => {
+    const sortingColumn = options[SELECT_OPTIONS.order]?.column;
+    const { isValid, error } = await checkTableAndFields(db, tableName, {...data, [sortingColumn]: ''});
+
+    if(isValid) {
+      const result = await db.all(
+        `SELECT * FROM ${tableName} ${getColumnsSelector(data)} ${getDateSelector(from, to)} ${getOptions(options)};`
       );
-    }
-  });
 
-  return result;
+      return { result };
+    }
+
+    return { error };
+  });
 };
 
 
-export { initDatabase, putData, getAll, getOneByParam, getAllByParam, getAllByParamDate };
+export { initDatabase, putData, getAll, getOneByParam, getAllByParam, getAllByParamAndDate };
