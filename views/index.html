@@ -34,6 +34,12 @@
         <input id="limit" type="number" name="limit" placeholder="limit" />
         <input type="submit" value="Submit" />
       </form>
+      <form id="get-user-form" method="get">
+        <h3>Get user</h3>
+        <p><code>GET /api/users/:_id</code></p>
+        <input id="userId" type="text" placeholder="user id" />
+        <input type="submit" value="Submit" />
+      </form>
     </div>
     <script>
       const exerciseForm = document.getElementById("exercise-form");
@@ -55,6 +61,15 @@
         logsForm.action = `/api/users/${userId}/logs?from=${from}&to=${to}&limit=${limit}`;
 
         logsForm.submit();
+      });
+
+      const getUserForm = document.getElementById("get-user-form");
+
+      getUserForm.addEventListener("submit", () => {
+        const userId = document.getElementById("userId").value;
+        getUserForm.action = `/api/users/${userId}`;
+
+        getUserForm.submit();
       });
     </script>
   </body>

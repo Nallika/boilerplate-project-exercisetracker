@@ -11,11 +11,24 @@ export const addNewUser = async (name) => {
   const {error, lastID} = await putData('Users', {name});
 
   if (error) {
-    return error.code === UNIQUE_FIELD_ERROR ?
-      `Can't add user with name: "${name}" it already exists` :
-      'Add user error';
+    return {
+      error: error.code === UNIQUE_FIELD_ERROR ?
+        `Can't add user with name: "${name}" it already exists` :
+        'Add user error'
+    };
   }
 
   // return just added user from db
-  return await getOneByParam('Users', 'id', lastID);
+  const result = await getOneByParam('Users', 'id', lastID);
+
+  return { result };
+}
+
+/**
+ * Gwt user by id
+ * @param id
+ * @returns {Promise<string|string|*>}
+ */
+export const getUserById = async (id) => {
+  return await getOneByParam('Users', 'id', Number(id));
 }

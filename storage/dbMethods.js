@@ -183,7 +183,8 @@ const getAllByParamDate = async (tableName, column, value, dateFrom, dateTo, lim
   await executeDbCommand(async (db) => {
     if(await checkTableAndFields(db, tableName, {[column]: value})) {
       result = await db.all(
-        `SELECT *, COUNT(*) FROM ${tableName} WHERE ${column} = "${value}" AND date BETWEEN "${dateFrom}" AND "${dateTo}" ${limit ? 'LIMIT '+limit : ''};`
+        `SELECT * FROM ${tableName} WHERE ${column} = "${value}" 
+         AND date BETWEEN "${dateFrom}" AND "${dateTo}" ORDER BY date ${limit ? 'LIMIT '+limit : ''};`
       );
     }
   });

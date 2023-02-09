@@ -1,11 +1,11 @@
-import { body, query, validationResult } from 'express-validator';
+import { body, param, query, validationResult } from 'express-validator';
 import { processExercise, getExercises } from '../models/exercisesModel.js';
 
 /**
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
  */
 export const addExercises = [
-  body(':_id').isNumeric().not().isEmpty().trim().escape(),
+  param('_id').isNumeric().not().isEmpty().trim().escape(),
   body('description').isString().not().isEmpty().trim().escape(),
   body('duration').isNumeric(),
   body('date').optional(),
@@ -17,7 +17,17 @@ export const addExercises = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const result = await processExercise(req.body);
+    const userId = req.params._id;
+
+    const { result, error } = await processExercise({
+      userId,
+      ...req.body
+    });
+
+    if (error) {
+      res.status(400).send(error);
+      return;
+    }
 
     res.send(result);
   }
@@ -27,7 +37,7 @@ export const addExercises = [
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
  */
 export const getExercisesLogs = [
-  query(':_id').isNumeric().not().isEmpty().trim().escape(),
+  param('_id').isNumeric().not().isEmpty().trim().escape(),
   query('from').optional(),
   query('to').optional(),
   query('limit').optional(),
@@ -39,6 +49,13 @@ export const getExercisesLogs = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    res.send(await getExercises(req.query));
+    const userId = req.params.id;
+
+    const exercises = await getExercises({
+      userId,
+      ...req.query
+    });
+
+    res.json(exercises);
   }
 ];

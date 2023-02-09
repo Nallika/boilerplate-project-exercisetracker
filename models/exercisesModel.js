@@ -6,14 +6,16 @@ import {putData, getOneByParam, getAll, getAllByParam, getAllByParamDate} from '
  * @returns {Promise<string|{[p: string]: *}>}
  */
 export const processExercise = async (data) => {
-  const { ':_id': id, description, duration, date } = data;
+  const { userId: id, description, duration, date } = data;
   const userId = Number(id);
 
   // check existence of user by provided id before search for exercises
   const user =  await getOneByParam('Users', 'id', userId);
 
   if (!user) {
-    return `There is no user with id = ${userId}`;
+    return {
+      error: `There is no user with id = ${userId}`
+    };
   }
 
   const exercisesValues = {
@@ -30,15 +32,19 @@ export const processExercise = async (data) => {
   const { error, lastID} = await putData('Exercises', exercisesValues);
 
   if (error) {
-    return `Error when adding exercise = ${error}`;
+    return {
+      error: 'Error when adding exercise check input values'
+    };
   }
 
   // get just added exercises and return alongside with linked user
   const exercise =  await getOneByParam('Exercises', 'id', lastID);
 
   return {
-     ...user,
-     ...exercise,
+    result: {
+      ...user,
+      ...exercise,
+    }
   }
 }
 
@@ -64,8 +70,4 @@ export const getExercises = async (data) => {
     exercises: result,
     count: result.length
   };
-}
-
-export const getAllExercises = async () => {
-  return await getAll('Exercises');
 }
