@@ -74,7 +74,9 @@ export const getLogs = async ({id, query}) => {
     };
   }
 
-  const {result: exercises, error } = await getExercises({userId, from, to, limit })
+  const fromDate = from ? formatDate(from) : '';
+  const toDate = to ? formatDate(to) : '';
+  const {result: exercises, error } = await getExercises({userId, fromDate, toDate, limit })
 
   if (error) {
     return {
@@ -82,15 +84,23 @@ export const getLogs = async ({id, query}) => {
     };
   }
 
+  const count = exercises[0]?.total || 0;
+
   return {
     result: {
       userId: user.id,
       username: user.name,
       logs: parseExercises(exercises),
-      count: exercises[0].total
+      count
     }
   }
 }
+
+/**
+ * @param {String | Number} num
+ * @returns {Number|string}
+ */
+const addZero = (num) => String(num).length > 1 ? num : '0'+num;
 
 /**
  * @param {String} dateString
@@ -98,10 +108,10 @@ export const getLogs = async ({id, query}) => {
  */
 const formatDate = (dateString) => {
   const date = new Date(dateString);
-  const day = String(date.getDay());
-  const mont = String(date.getMonth() + 1);
+  const day = addZero(date.getDay());
+  const month = addZero(date.getMonth() + 1);
 
-  return `${day.length > 1 ? day : '0'+day}-${mont.length > 1 ? mont : '0'+mont}-${date.getFullYear()}`
+  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 /**
@@ -112,7 +122,7 @@ const formatDate = (dateString) => {
 const parseExercises = (exercises) => {
   return exercises.map(({id, date, description, duration}) => ({
     id,
-    date: formatDate(date),
+    date,
     description,
     duration
   }))
@@ -123,13 +133,14 @@ const parseExercises = (exercises) => {
  * @param data
  * @returns {Promise<*>}
  */
-const getExercises = async ({ userId, from, to, limit }) => {
+const getExercises = async ({ userId, fromDate, toDate, limit }) => {
   return await getAllByParamAndDate(
     'Exercises',
     {userId},
-    from,
-    to,
-    {limit, order: {column: 'date', type: ORDER_TYPES.ASC}}
+    fromDate,
+    toDate,
+    {limit, order: {column: 'date', type: ORDER_TYPES.ASC}},
+    true
   );
 }
 

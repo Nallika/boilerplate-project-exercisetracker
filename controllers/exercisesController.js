@@ -1,6 +1,8 @@
 import { body, param, query, validationResult } from 'express-validator';
 import { processExercise, getLogs, getExercisesList } from '../models/exercisesModel.js';
 
+const DATE_VALIDATION_ERROR = 'Wrong date format use yyyy-mm-dd';
+
 /**
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
  */
@@ -8,7 +10,7 @@ export const addExercises = [
   param('_id').isNumeric().not().isEmpty().trim().escape(),
   body('description').isString().not().isEmpty().trim().escape(),
   body('duration').isNumeric(),
-  body('date').optional(),
+  body('date', DATE_VALIDATION_ERROR).isISO8601().optional({ nullable: true, checkFalsy: true }),
 
   async (req, res) => {
     const errors = validationResult(req);
@@ -36,8 +38,8 @@ export const addExercises = [
  */
 export const getExercisesLogs = [
   param('_id').isNumeric().not().isEmpty().trim().escape(),
-  query('from').optional(),
-  query('to').optional(),
+  query('from', DATE_VALIDATION_ERROR).isISO8601().optional({ nullable: true, checkFalsy: true }),
+  query('to', DATE_VALIDATION_ERROR).isISO8601().optional({ nullable: true, checkFalsy: true }),
   query('limit').optional(),
 
   async (req, res) => {

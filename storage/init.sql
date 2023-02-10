@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS Exercises (
 	userId INTEGER,
 	description VARCHAR(40),
 	duration INTEGER,
-	date TEXT DEFAULT CURRENT_TIMESTAMP,
+	date TEXT DEFAULT (datetime('now','localtime')),
 
 	FOREIGN KEY (userID) REFERENCES Users(id)
 );

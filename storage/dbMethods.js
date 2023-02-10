@@ -138,18 +138,20 @@ const getAllByParam = async (tableName, data, options) => {
  * @param {String} from
  * @param {String} to
  * @param {Object} options
+ * @param {boolean} formatDate
  * @returns {Promise<*>}
  */
-const getAllByParamAndDate = async (tableName, data, from, to, options) => {
+const getAllByParamAndDate = async (tableName, data, from, to, options, formatDate = false) => {
 
   return await executeDbCommand(async (db) => {
     const sortingColumn = options[SELECT_OPTIONS.order]?.column;
     const { isValid, error } = await checkTableAndFields(db, tableName, {...data, [sortingColumn]: ''});
+    const addFormatDate = formatDate ? ", strftime('%Y-%m-%d', date) AS date" : '';
 
     if(isValid) {
       const result = await db.all(
         `with cte as (select count(*) total from ${tableName})
-         SELECT *, (select total from cte) total FROM ${tableName} ${getColumnsSelector(data)} ${getDateSelector(from, to)} ${getOptions(options)};`
+         SELECT * ${addFormatDate}, (select total from cte) total FROM ${tableName} ${getColumnsSelector(data)} ${getDateSelector(from, to)} ${getOptions(options)};`
       );
 
       return { result };
