@@ -1,4 +1,5 @@
 import {putData, getOneByParam, getAll, getAllByParamAndDate} from '../storage/dbMethods.js';
+import { getUserById } from './usersModel.js'
 import { ORDER_TYPES } from '../constants/index.js';
 
 /**
@@ -11,11 +12,11 @@ export const processExercise = async (data) => {
   const userId = Number(id);
 
   // check existence of user by provided id before search for exercises
-  const { result: user, error: userError } =  await getOneByParam('Users', {id: userId});
+  const { result: user, error: userError } = await getUserById(userId);
 
   if (!user || userError) {
     return {
-      error: `There is no user with id = ${userId}`
+      error: `Error when add exercise: there is no user with id = ${userId}`
     };
   }
 
@@ -56,32 +57,53 @@ export const processExercise = async (data) => {
 }
 
 /**
+ *
+ * @param id
+ * @param query
+ * @returns {Promise<{error: string}|{result: {[p: string]: *}}>}
+ */
+export const getLogs = async ({id, query}) => {
+  const userId = Number(id);
+  const { from, to, limit } = query;
+
+  const {result: user, error: userError} = await getUserById(userId);
+
+  if (!user || userError) {
+    return {
+      error: `Error when retrieving user logs: there is no user with id = ${userId}`
+    };
+  }
+
+  const {result: exercises, error } = await getExercises({userId, from, to, limit })
+
+  if (error) {
+    return {
+      error: `Error when retrieving user logs: ${error}`
+    };
+  }
+
+  return {
+    result: {
+      ...user,
+      logs: exercises,
+      count: exercises.length
+    }
+  }
+}
+
+/**
  * Ge exercises by user and optionally by provided date
  * @param data
  * @returns {Promise<*>}
  */
-export const getExercises = async (data) => {
-  const { id, from, to, limit } = data;
-  const userId = Number(id);
-
-  const { result, error } = await getAllByParamAndDate(
+const getExercises = async ({ userId, from, to, limit }) => {
+  return await getAllByParamAndDate(
     'Exercises',
     {userId},
     from,
     to,
     {limit, order: {column: 'date', type: ORDER_TYPES.ASC}}
   );
-
-  if (error) {
-    return {
-      error: 'Retrieving exercises error, check input values'
-    };
-  }
-
-  return {
-    result,
-    count: result.length
-  };
 }
 
 /**

@@ -1,5 +1,5 @@
 import { body, param, query, validationResult } from 'express-validator';
-import { processExercise, getExercises, getExercisesList } from '../models/exercisesModel.js';
+import { processExercise, getLogs, getExercisesList } from '../models/exercisesModel.js';
 
 /**
  * @type {(ValidationChain|(function(*, *): Promise<*|undefined>)|*)[]}
@@ -47,8 +47,8 @@ export const getExercisesLogs = [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { result, error } = await getExercises({
-      ...req.query,
+    const { result, error } = await getLogs({
+      query: req.query,
       id: req.params._id,
     });
 
