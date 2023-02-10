@@ -86,10 +86,36 @@ export const getLogs = async ({id, query}) => {
     result: {
       userId: user.id,
       username: user.name,
-      logs: exercises,
-      count: exercises.length
+      logs: parseExercises(exercises),
+      count: exercises[0].total
     }
   }
+}
+
+/**
+ * @param {String} dateString
+ * @returns {String}
+ */
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  const day = String(date.getDay());
+  const mont = String(date.getMonth() + 1);
+
+  return `${day.length > 1 ? day : '0'+day}-${mont.length > 1 ? mont : '0'+mont}-${date.getFullYear()}`
+}
+
+/**
+ * format exercises
+ * @param exercises
+ * @returns {Array}
+ */
+const parseExercises = (exercises) => {
+  return exercises.map(({id, date, description, duration}) => ({
+    id,
+    date: formatDate(date),
+    description,
+    duration
+  }))
 }
 
 /**

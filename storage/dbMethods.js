@@ -148,7 +148,8 @@ const getAllByParamAndDate = async (tableName, data, from, to, options) => {
 
     if(isValid) {
       const result = await db.all(
-        `SELECT * FROM ${tableName} ${getColumnsSelector(data)} ${getDateSelector(from, to)} ${getOptions(options)};`
+        `with cte as (select count(*) total from ${tableName})
+         SELECT *, (select total from cte) total FROM ${tableName} ${getColumnsSelector(data)} ${getDateSelector(from, to)} ${getOptions(options)};`
       );
 
       return { result };
