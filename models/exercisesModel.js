@@ -84,7 +84,8 @@ export const getLogs = async ({id, query}) => {
 
   return {
     result: {
-      ...user,
+      userId: user.id,
+      username: user.name,
       logs: exercises,
       count: exercises.length
     }
