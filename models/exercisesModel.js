@@ -108,7 +108,7 @@ const addZero = (num) => String(num).length > 1 ? num : '0'+num;
  */
 const formatDate = (dateString) => {
   const date = new Date(dateString);
-  const day = addZero(date.getDay());
+  const day = addZero(date.getDate());
   const month = addZero(date.getMonth() + 1);
 
   return `${date.getFullYear()}-${month}-${day}`;
